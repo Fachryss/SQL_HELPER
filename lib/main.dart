@@ -13,6 +13,21 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter SQLite Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.purple,
+        scaffoldBackgroundColor: Colors.white,
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Colors.white),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Colors.black,
+        ),
+      ),
       home: const HomePage(),
     );
   }
@@ -30,6 +45,7 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _imageUrlController = TextEditingController();
   bool _isLoading = true;
 
   @override
@@ -38,56 +54,88 @@ class _HomePageState extends State<HomePage> {
     _refreshItems();
   }
 
-  // *Membaca semua data dari database*
   void _refreshItems() async {
     final data = await SQLHelper.getItems();
     setState(() {
-      _items = data;
+      _items = data.map((item) {
+        item['imageUrl'] ??= ''; // Pastikan imageUrl tidak null
+        return item;
+      }).toList();
       _isLoading = false;
     });
   }
 
-  // *Menampilkan dialog untuk menambah atau mengedit data*
   void _showForm(int? id) async {
     if (id != null) {
       final existingItem = _items.firstWhere((element) => element['id'] == id);
       _titleController.text = existingItem['title'];
       _descriptionController.text = existingItem['description'];
       _noteController.text = existingItem['note'];
+      _imageUrlController.text = existingItem['imageUrl'];
     } else {
       _titleController.clear();
       _descriptionController.clear();
       _noteController.clear();
+      _imageUrlController.clear();
     }
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.black,
       builder: (_) => Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title')),
+              controller: _titleController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                labelStyle: TextStyle(color: Colors.white),
+              ),
+            ),
             TextField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description')),
-            const SizedBox(height: 20),
+              controller: _descriptionController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Description',
+                labelStyle: TextStyle(color: Colors.white),
+              ),
+            ),
             TextField(
-                controller: _noteController,
-                decoration: const InputDecoration(labelText: 'Note')),
+              controller: _noteController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Note',
+                labelStyle: TextStyle(color: Colors.white),
+              ),
+            ),
+            TextField(
+              controller: _imageUrlController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Image URL',
+                labelStyle: TextStyle(color: Colors.white),
+              ),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
                 if (id == null) {
-                  await SQLHelper.createItem(_titleController.text,
-                      _descriptionController.text, _noteController.text);
+                  await SQLHelper.createItem(
+                      _titleController.text,
+                      _descriptionController.text,
+                      _noteController.text,
+                      _imageUrlController.text);
                 } else {
-                  await SQLHelper.updateItem(id, _titleController.text,
-                      _descriptionController.text, _noteController.text);
+                  await SQLHelper.updateItem(
+                      id,
+                      _titleController.text,
+                      _descriptionController.text,
+                      _noteController.text,
+                      _imageUrlController.text);
                 }
-
                 Navigator.of(context).pop();
                 _refreshItems();
               },
@@ -99,7 +147,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // *Menghapus data berdasarkan ID*
   void _deleteItem(int id) async {
     await SQLHelper.deleteItem(id);
     _refreshItems();
@@ -114,26 +161,47 @@ class _HomePageState extends State<HomePage> {
           : ListView.builder(
               itemCount: _items.length,
               itemBuilder: (context, index) => Card(
+                color: Colors.purple[900],
                 margin: const EdgeInsets.all(8),
                 child: ListTile(
-                  title: Text(_items[index]['title']),
+                  leading: _items[index]['imageUrl'] != null &&
+                          _items[index]['imageUrl'].isNotEmpty
+                      ? Image.network(
+                          _items[index]['imageUrl'],
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.broken_image,
+                                  color: Colors.white),
+                        )
+                      : const Icon(Icons.image, color: Colors.white),
+                  title: Text(
+                    _items[index]['title'],
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_items[index]['description']),
+                      Text(_items[index]['description'],
+                          style: const TextStyle(color: Colors.white70)),
                       Text('Note: ${_items[index]['note']}',
-                          style: TextStyle(fontStyle: FontStyle.italic)),
+                          style: const TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.white70)),
                     ],
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _showForm(_items[index]['id'])),
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                        onPressed: () => _showForm(_items[index]['id']),
+                      ),
                       IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteItem(_items[index]['id'])),
+                        icon: const Icon(Icons.delete, color: Colors.white),
+                        onPressed: () => _deleteItem(_items[index]['id']),
+                      ),
                     ],
                   ),
                 ),
@@ -141,10 +209,11 @@ class _HomePageState extends State<HomePage> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showForm(null),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
+        color: Colors.black,
         shape: const CircularNotchedRectangle(),
         notchMargin: 8.0,
         child: Container(height: 50.0),
